@@ -129,7 +129,6 @@ func setCharsFromArgs(args []string, chars map[CharacterKey]string) {
 			chars[SetWrapClose] = ""
 			chars[RecordWrapOpen] = ""
 			chars[RecordWrapClose] = ""
-			chars[FieldSplit] = " "
 			chars[FieldJoin] = ","
 		} else if (arg == "--json") {
 			chars[SetWrapOpen] = "["
@@ -137,7 +136,6 @@ func setCharsFromArgs(args []string, chars map[CharacterKey]string) {
 			chars[RecordWrapOpen] = "["
 			chars[RecordWrapClose] = "]"
 			chars[RecordJoin] = ","
-			chars[FieldSplit] = " "
 			chars[FieldJoin] = ","
 		} else {
 			fmt.Fprintf(os.Stderr, "wrap: invalid option '%v' or insufficient options to that argument\n", arg)

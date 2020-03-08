@@ -1,6 +1,6 @@
 # Wrap
 
-This program combines functionality for splitting input strings on various characters and, printing that split input wrapped and joined by other strings.
+This program combines functionality for splitting input strings on various characters and printing that split input wrapped and joined by other strings.
 
 `wrap` works with the concepts of sets, records, and fields. By default, the entirety of the input stream is treated as a set, and each line of input is treated as a record in that set, and each tab-separated part of each line is treated as a field in that record. In the output, fields can wrapped in some character (by default, a double quote) or not, and separated from each other by some other character (by default, a space) or not, and records can be wrapped (by default, by open and close parentheses) or not, and separated from each other (by default, by newlines) or not. Also, the set of records can be wrapped (by default, by open and close parentheses) or not.
 
@@ -83,7 +83,7 @@ Output when specifying set wrap characters as square braces, record wrap charact
     $ wrap -sw [ ] -rw { } -rj , -fj : < test.data
     [{"Jan 1":"Happy new year"},{"Jan 3":"Happy birthday"},{"Apr 1":"April Fool's Day"}]
 
-Output when specifying a blank for the set wrap, record wrap, field wrap, two colons for the record separator, and one colon for the field joiner:
+Output when specifying a blank for the set, record, and field wraps, two colons for the record separator, and one colon for the field separator:
 
     $ wrap -sw- -rw- -fw- -rj :: -fj : < test.data
     Jan 1:Happy new year::Jan 1:Happy birthday::Apr 1:April Fool's Day

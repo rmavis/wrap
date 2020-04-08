@@ -273,6 +273,7 @@ func wrapStream(reader *bufio.Reader, wraps map[CharacterKey]string) {
 			fmt.Fprintf(os.Stderr, "wrap: Error while reading: %s\n", err)
 			break
 		}
+		// This doesn't enable multibyte wrap characters.  TODO
 		char := string(rune)
 		if !in_set {
 			openSet()

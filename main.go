@@ -5,6 +5,7 @@ import (
 	//	"errors"
 	"fmt"
 	"io"
+	//"math"
 	"os"
 	//	"path/filepath"
 )
@@ -12,12 +13,6 @@ import (
 
 func main() {
 	has_args := len(os.Args) > 1
-	has_data := !isFileEmpty(os.Stdin)
-
-	if (!(has_args || has_data)) {
-		printUsage(os.Args[0])
-		return
-	}
 
 	chars := defaultCharacters()
 	if has_args {
@@ -144,16 +139,26 @@ func setCharsFromArgs(args []string, chars map[CharacterKey]string) {
 	}
 }
 
-func fileSize(file *os.File) int {
-	stats, err := file.Stat()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Can't stat file '%v': %s\n", file, err)
+func isNext(reader *bufio.Reader, check string) bool {
+	if (len(check) == 0) {
+		return false
 	}
-	return int(stats.Size())
+	bytes, err := reader.Peek(len(check))
+	if (err != nil) {
+		fmt.Fprintf(os.Stderr, "Error peeking %v bytes: %s\n", len(check), err)
+		return false
+	}
+//fmt.Fprintf(os.Stderr, "CHECKING '%s' vs '%s'\n", string(bytes), check)
+	return string(bytes) == check
 }
 
-func isFileEmpty(file *os.File) bool {
-	return fileSize(file) == 0
+func skipNext(reader *bufio.Reader, amount int) bool {
+	n, err := reader.Discard(amount)
+	if (err != nil) || (n != amount) {
+		fmt.Fprintf(os.Stderr, "Error discarding %v bytes: %s\n", amount, err)
+		return false
+	}
+	return true
 }
 
 func wrapStream(reader *bufio.Reader, wraps map[CharacterKey]string) {
@@ -214,29 +219,22 @@ func wrapStream(reader *bufio.Reader, wraps map[CharacterKey]string) {
 		first_set = false
 	}
 
-	for {
-		// TODO: If any of the split strings are longer than one character,
-		// this will not work.
-		rune, _, err := reader.ReadRune()
-		if err == io.EOF {
-			if in_field {
-				closeField()
-			}
-			if in_record {
-				closeRecord()
-			}
-			if in_set {
-				closeSet()
-			}
-			fmt.Fprintf(os.Stdout, "\n")
-			break
-		} else if err != nil {
-			fmt.Fprintf(os.Stderr, "wrap: Error while reading: %s\n", err)
-			break
+	closeAll := func() {
+		if in_field {
+			closeField()
 		}
+		if in_record {
+			closeRecord()
+		}
+		if in_set {
+			closeSet()
+		}
+	}
 
-		char := string(rune)
-		if (char == wraps[SetSplit]) {
+	for {
+		if (isNext(reader, wraps[SetSplit])) {
+//fmt.Fprintf(os.Stderr, "Next char is set split\n", wraps[SetSplit])
+			skipNext(reader, len(wraps[SetSplit]))
 			if in_field {
 				closeField()
 			}
@@ -247,7 +245,9 @@ func wrapStream(reader *bufio.Reader, wraps map[CharacterKey]string) {
 				openSet()
 			}
 			closeSet()
-		} else if (char == wraps[RecordSplit]) {
+		} else if (isNext(reader, wraps[RecordSplit])) {
+//fmt.Fprintf(os.Stderr, "Next char is record split\n", wraps[RecordSplit])
+			skipNext(reader, len(wraps[RecordSplit]))
 			if in_field {
 				closeField()
 			}
@@ -255,23 +255,38 @@ func wrapStream(reader *bufio.Reader, wraps map[CharacterKey]string) {
 				openRecord()
 			}
 			closeRecord()
-		} else if (char == wraps[FieldSplit]) {
+		} else if (isNext(reader, wraps[FieldSplit])) {
+//fmt.Fprintf(os.Stderr, "Next char is field split\n", wraps[FieldSplit])
+			skipNext(reader, len(wraps[FieldSplit]))
 			if !in_field {
 				openField()
 			}
 			closeField()
-		} else {
-			if !in_set {
-				openSet()
-			}
-			if !in_record {
-				openRecord()
-			}
-			if !in_field {
-				openField()
-			}
-			fmt.Fprintf(os.Stdout, char)
 		}
+
+		rune, _, err := reader.ReadRune()
+		if err == io.EOF {
+			closeAll()
+			fmt.Fprintf(os.Stdout, "\n")
+			break
+		} else if err != nil {
+			fmt.Fprintf(os.Stderr, "wrap: Error while reading: %s\n", err)
+			break
+		}
+		char := string(rune)
+		if !in_set {
+			openSet()
+		}
+		if !in_record {
+			openRecord()
+		}
+		if !in_field {
+			openField()
+		}
+		if (char == wraps[FieldWrapOpen]) || (char == wraps[FieldWrapClose]) {
+			fmt.Fprintf(os.Stdout, "\\")
+		}
+		fmt.Fprintf(os.Stdout, char)
 	}
 }
 
